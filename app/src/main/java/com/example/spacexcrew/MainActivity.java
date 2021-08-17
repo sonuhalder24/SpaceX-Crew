@@ -10,6 +10,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.net.ConnectivityManager;
 import android.net.Uri;
@@ -32,7 +33,8 @@ public class MainActivity extends AppCompatActivity {
     ArrayList<Crew> list;
     CrewAdapter.onClick clicking;
     ProgressBar progressBar;
-
+    SharedPreferences preferences;
+    SharedPreferences.Editor editor;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -44,6 +46,7 @@ public class MainActivity extends AppCompatActivity {
         progressBar=findViewById(R.id.progress);
         progressBar.setVisibility(View.VISIBLE);
         recyclerView.setVisibility(View.GONE);
+
 
         list=new ArrayList<>();
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
@@ -75,21 +78,36 @@ public class MainActivity extends AppCompatActivity {
 
         mCrewViewModel = new ViewModelProvider(this,ViewModelProvider.AndroidViewModelFactory.getInstance(getApplication()))
                 .get(CrewViewModel.class);
+        preferences=getSharedPreferences("FirstLoad",MODE_PRIVATE);
+        editor=preferences.edit();
+        if(preferences.getBoolean("first",false)){
+            if(preferences.getBoolean("loading",false)) {
+                if (isNetworkConnected()) {
+                    mCrewViewModel.fromAPI(MainActivity.this);
+                } else {
+                    Toast.makeText(MainActivity.this, "Turn on your internet for load first time", Toast.LENGTH_SHORT).show();
+                }
+
+            }
+
+        }
+
+        else{
+            editor.putBoolean("first",true);
+            editor.putBoolean("loading",false);
+            if(isNetworkConnected()){
+                mCrewViewModel.fromAPI(MainActivity.this);
+            }
+            else{
+                Toast.makeText(MainActivity.this, "Turn on your internet for load first time", Toast.LENGTH_SHORT).show();
+            }
+        }
+        editor.commit();
         mCrewViewModel.getAllCrews().observe(this,
                 new Observer<List<Crew>>() {
                     @Override
                     public void onChanged(List<Crew> crews) {
-//                        if(crews.size()>0){
-//
-//                        }
-//                        else{
-//                            if(isNetworkConnected()){
-//                                mCrewViewModel.fromAPI(MainActivity.this);
-//                            }
-//                            else{
-//                                Toast.makeText(MainActivity.this, "Turn on your internet for load first time", Toast.LENGTH_SHORT).show();
-//                            }
-//                        }
+
                         adapter.submitList(crews);
                         progressBar.setVisibility(View.GONE);
                         recyclerView.setVisibility(View.VISIBLE);
